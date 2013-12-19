@@ -51,7 +51,7 @@ module OrganizationLicenseAudit
       $stderr.puts ""
       success
     rescue Exception => e
-      $stderr.puts "RESCUE #{e.class}"
+      raise if e.is_a?(Interrupt) # user interrupted
       $stderr.puts "Error auditing #{repo.project} (#{e})"
     end
 
