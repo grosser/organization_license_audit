@@ -14,4 +14,7 @@ Gem::Specification.new name, OrganizationLicenseAudit::VERSION do |s|
     s.signing_key = cert
     s.cert_chain = ["gem-public_cert.pem"]
   end
+  s.executables = ["organization-license-audit"]
+  s.add_runtime_dependency "bundler-organization_audit"
+  s.add_runtime_dependency "license_finder"
 end
