@@ -14,19 +14,24 @@ Usage
 For yourself (git config github.user)
 ```Bash
 organization-license-audit
-parallel
-No Gemfile.lock found
 
 parllel_tests
-license_finder
-Licenses found: MIT, Apache
+git clone git@github.com:grosser/parallel_tests.git --depth 1 --quiet
+bundle --path vendor/bundle --quiet
+license_finder --quiet
+All gems are approved for use
 
-rails_example_app
-license_finder
-Licenses found: MIT, GPL
+evil_gem
+git clone git@github.com:grosser/evil_gem.git --depth 1 --quiet
+bundle --path vendor/bundle --quiet
+license_finder --quiet
+Dependencies that need approval:
+evil_gem_dependency, 0.3.9, GPL
+
+...
 
 Failed:
-rails_example_app - GPL
+https://github.com/grosser/parallel -- Michael Grosser <michael@grosser.it>
 ```
 
 For someone else
@@ -63,6 +68,9 @@ enter your password -> TOKEN
 organization-license-audit --user your-user --token TOKEN --organization your-organization
 ```
 
+### Approving / tracking dependencies
+
+To approve individual licenses or add dependencies take a look at [licence_finder](https://github.com/pivotal/LicenseFinder)
 
 Author
 ======

@@ -9,7 +9,7 @@ module OrganizationLicenseAudit
       if bad.size == 0
         0
       else
-        $stderr.puts "Bad licenses:"
+        $stderr.puts "Failed:"
         puts bad
         1
       end
@@ -39,7 +39,7 @@ module OrganizationLicenseAudit
           raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet")
           Dir.chdir repo.project do
             with_clean_env do
-              raise "Failed to bundle" unless system("([ ! -e Gemfile ] || bundle --path vendor/bundle --quiet)")
+              raise "Failed to bundle" if File.exist?("Gemfile") && !sh("bundle --path vendor/bundle --quiet")
               options[:whitelist].each do |license|
                 raise "failed to approve #{license}" unless system("license_finder whitelist add #{license} >/dev/null")
               end
@@ -51,6 +51,7 @@ module OrganizationLicenseAudit
       $stderr.puts ""
       success
     rescue Exception => e
+      $stderr.puts "RESCUE #{e.class}"
       $stderr.puts "Error auditing #{repo.project} (#{e})"
     end
 
