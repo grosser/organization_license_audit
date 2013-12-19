@@ -30,26 +30,22 @@ module OrganizationLicenseAudit
     end
 
     def audit_repo(repo, options)
-      #finder = `which license_finder`
       success = false
       $stderr.puts repo.project
       in_temp_dir do
-        if system("git clone #{repo.clone_url} --depth 1")
+        if options[:ignore_gems] && repo.gem?
+          $stderr.puts "Ignored because it's a gem"
+        else
+          raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet")
           Dir.chdir repo.project do
             with_clean_env do
-              raise "Failed to bundle" unless system("([ ! -e Gemfile ] || bundle --path vendor/bundle)")
-              if options[:ignore_gems] && repo.gem?
-                $stderr.puts "Ignored because it's a gem"
-              else
-                options[:whitelist].each do |license|
-                  raise "failed to approve #{license}" unless system("license_finder whitelist add #{license} >/dev/null")
-                end
-                success = !sh("license_finder")
+              raise "Failed to bundle" unless system("([ ! -e Gemfile ] || bundle --path vendor/bundle --quiet)")
+              options[:whitelist].each do |license|
+                raise "failed to approve #{license}" unless system("license_finder whitelist add #{license} >/dev/null")
               end
+              success = !sh("license_finder --quiet")
             end
           end
-        else
-          $stderr.puts "No Gemfile.lock found"
         end
       end
       $stderr.puts ""

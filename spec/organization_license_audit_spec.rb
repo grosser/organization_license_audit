@@ -1,26 +1,23 @@
 require "spec_helper"
 
 describe OrganizationLicenseAudit do
+  let(:public_token) { "--token 36a1b2a815b98d755528fa6e09b845965fe1e046" }
+
   it "has a VERSION" do
     OrganizationLicenseAudit::VERSION.should =~ /^[\.\da-z]+$/
   end
 
   context "CLI" do
     it "succeeds with approved" do
-      result = audit("--user user-with-unpatched-apps --approve MIT,Ruby")
-      result.should include "unpatched\nbundle-audit\nName: json\nVersion: 1.5.3" # Individual vulnerabilities
-      result.should include "Vulnerable:\nhttps://github.com/user-with-unpatched-apps/unpatched" # Summary
+      result = audit("--user user-with-unpatched-apps --whitelist MIT,Ruby #{public_token}")
+      result.strip.should == "unpatched\ngit clone git@github.com:user-with-unpatched-apps/unpatched.git --depth 1 --quiet\n\nlicense_finder --quiet\nAll gems are approved for use"
     end
 
     it "fails with unapproved" do
-      result = audit("--user user-with-unpatched-apps", :fail => true)
-      result.should include "unpatched\nbundle-audit\nName: json\nVersion: 1.5.3" # Individual vulnerabilities
-      result.should include "Vulnerable:\nhttps://github.com/user-with-unpatched-apps/unpatched" # Summary
-    end
-
-    it "only shows failed projects on stdout" do
-      result = audit("--user user-with-unpatched-apps 2>/dev/null", :fail => true, :keep_output => true)
-      result.should == "https://github.com/user-with-unpatched-apps/unpatched -- user-with-unpatched-apps <michael+unpatched@grosser.it>\n"
+      result = audit("--user user-with-unpatched-apps #{public_token}", :fail => true)
+      result.strip.should include "Dependencies that need approval:"
+      result.strip.should include "json, 1.5.3, ruby"
+      result.strip.should include "Bad licenses:\nhttps://github.com/user-with-unpatched-apps/unpatched -- user-with-unpatched-apps <michael+unpatched@grosser.it>"
     end
 
     it "ignores projects in --ignore" do
@@ -33,17 +30,21 @@ describe OrganizationLicenseAudit do
     end
 
     it "shows --help" do
-      audit("--help").should include("Audit all Gemfiles")
+      audit("--help").should include("Audit all licenses")
     end
 
     def audit(command, options={})
-      sh("bin/bundle-organization-audit #{command}", options)
+      sh("bin/organization-license-audit #{command}", options)
     end
 
     def sh(command, options={})
       result = `#{command} #{"2>&1" unless options[:keep_output]}`
       raise "FAILED #{command}\n#{result}" if $?.success? == !!options[:fail]
       decolorize(result)
+    end
+
+    def decolorize(string)
+      string.gsub(/\e\[\d+m/, "").gsub(/Warning: Permanently added.*/, "")
     end
   end
 end
