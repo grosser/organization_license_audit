@@ -1,6 +1,6 @@
 require "organization_license_audit/version"
 require "tmpdir"
-require "bundler/organization_audit/repo"
+require "organization_audit"
 
 module OrganizationLicenseAudit
   BUNDLE_PATH = "vendor/bundle"
@@ -8,6 +8,7 @@ module OrganizationLicenseAudit
   class << self
     def run(options)
       bad = find_bad(options)
+      # TODO nice summary like licenses / failed
       if bad.size == 0
         0
       else
@@ -25,37 +26,34 @@ module OrganizationLicenseAudit
     end
 
     def find_bad(options)
-      Bundler::OrganizationAudit::Repo.all(options).select do |repo|
-        next if (options[:ignore] || []).include? repo.url
+      OrganizationAudit.all(options).select do |repo|
+        next if options[:ignore_gems] and repo.gem?
         audit_repo(repo, options)
       end
     end
 
     def audit_repo(repo, options)
-      success = false
-      $stderr.puts repo.project
+      bad = false
+      $stderr.puts repo.name
       in_temp_dir do
-        if options[:ignore_gems] && repo.gem?
-          $stderr.puts "Ignored because it's a gem"
-        else
-          raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet")
-          Dir.chdir repo.project do
-            with_clean_env do
-              bundled = File.exist?("Gemfile")
-              raise "Failed to bundle" if bundled && !sh("bundle --path #{BUNDLE_PATH} --quiet")
-              options[:whitelist].each do |license|
-                raise "failed to approve #{license}" unless system("license_finder whitelist add '#{license}' >/dev/null")
-              end
-              success = !sh("#{combined_gem_path if bundled}license_finder --quiet")
+        raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet")
+        Dir.chdir repo.name do
+          with_clean_env do
+            bundled = File.exist?("Gemfile")
+            raise "Failed to bundle" if bundled && !sh("bundle --path #{BUNDLE_PATH} --quiet")
+            options[:whitelist].each do |license|
+              raise "failed to approve #{license}" unless system("license_finder whitelist add '#{license}' >/dev/null")
             end
+            bad = !sh("#{combined_gem_path if bundled}license_finder --quiet")
           end
         end
       end
       $stderr.puts ""
-      success
+      bad
     rescue Exception => e
       raise if e.is_a?(Interrupt) # user interrupted
-      $stderr.puts "Error auditing #{repo.project} (#{e})"
+      $stderr.puts "Error auditing #{repo.name} (#{e})"
+      true
     end
 
     # license_finder loads all gems in the target repo, which fails if they are not available in the current ruby installation
@@ -69,7 +67,7 @@ module OrganizationLicenseAudit
     end
 
     def with_clean_env(&block)
-      if Bundler.respond_to?(:with_clean_env)
+      if defined?(Bundler)
         Bundler.with_clean_env(&block)
       else
         yield
@@ -85,16 +83,6 @@ module OrganizationLicenseAudit
         end
       end
       $?.success?
-    end
-  end
-end
-
-Bundler::OrganizationAudit::Repo.class_eval do
-  def clone_url
-    if private?
-      url.sub("https://", "git@").sub("/", ":") + ".git"
-    else
-      url + ".git"
     end
   end
 end

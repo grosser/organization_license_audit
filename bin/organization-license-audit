@@ -12,12 +12,11 @@ end
 
 options = {
   :ignore => [],
-  :ignore_cves => [],
   :user => git_config("github.user"),
   :whitelist => []
 }
-OptionParser.new do |opts|
-  opts.banner = <<BANNER
+OptionParser.new do |parser|
+  parser.banner = <<BANNER
 Audit all licenses used by your github organization/user
 
 Usage:
@@ -25,14 +24,11 @@ Usage:
 
 Options:
 BANNER
-  opts.on("--token TOKEN", "Use token") { |token| options[:token] = token }
-  opts.on("--user USER", "Use user") { |user| options[:user] = user }
-  opts.on("--ignore REPO_URL", "Ignore given repo urls (use multiple times)") { |repo_url| options[:ignore] << repo_url }
-  opts.on("--ignore-gems", "Ignore repos that have a %{repo}.gemspec") { options[:ignore_gems] = true }
-  opts.on("-w", "--whitelist=LICENSES", String, "Comma separated list of licenses") { |whitelist| options[:whitelist] = whitelist.split(",") }
-  opts.on("--organization ORGANIZATION", "Use user") { |organization| options[:organization] = organization }
-  opts.on("-h", "--help", "Show this.") { puts opts; exit }
-  opts.on("-v", "--version", "Show Version"){ puts OrganizationLicenseAudit::VERSION; exit}
+  OrganizationAudit.optparse(parser, options)
+  parser.on("--ignore-gems", "Ignore repos that have a %{repo}.gemspec") { options[:ignore_gems] = true }
+  parser.on("-w", "--whitelist=LICENSES", String, "Comma separated list of licenses") { |whitelist| options[:whitelist] = whitelist.split(",") }
+  parser.on("-h", "--help", "Show this.") { puts parser; exit }
+  parser.on("-v", "--version", "Show Version"){ puts OrganizationLicenseAudit::VERSION; exit}
 end.parse!
 
 exit OrganizationLicenseAudit.run(options)

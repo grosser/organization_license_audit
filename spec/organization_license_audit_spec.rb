@@ -21,7 +21,7 @@ describe OrganizationLicenseAudit do
     end
 
     it "ignores projects in --ignore" do
-      result = audit("--user user-with-unpatched-apps --ignore https://github.com/user-with-unpatched-apps/unpatched 2>/dev/null", :keep_output => true)
+      result = audit("--user user-with-unpatched-apps --ignore https://github.com/user-with-unpatched-apps/unpatched 2>/dev/null #{public_token}", :keep_output => true)
       result.should == ""
     end
 
