@@ -1,3 +1,4 @@
+before_script: 'echo -e "Host *\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config'
 bundler_args: ""
 rvm:
   - 1.9.3
