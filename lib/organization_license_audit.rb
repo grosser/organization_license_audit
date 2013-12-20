@@ -3,6 +3,8 @@ require "tmpdir"
 require "bundler/organization_audit/repo"
 
 module OrganizationLicenseAudit
+  BUNDLE_PATH = "vendor/bundle"
+
   class << self
     def run(options)
       bad = find_bad(options)
@@ -39,11 +41,12 @@ module OrganizationLicenseAudit
           raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet")
           Dir.chdir repo.project do
             with_clean_env do
-              raise "Failed to bundle" if File.exist?("Gemfile") && !sh("bundle --path vendor/bundle --quiet")
+              bundled = File.exist?("Gemfile")
+              raise "Failed to bundle" if bundled && !sh("bundle --path #{BUNDLE_PATH} --quiet")
               options[:whitelist].each do |license|
-                raise "failed to approve #{license}" unless system("license_finder whitelist add #{license} >/dev/null")
+                raise "failed to approve #{license}" unless system("license_finder whitelist add '#{license}' >/dev/null")
               end
-              success = !sh("license_finder --quiet")
+              success = !sh("#{combined_gem_path if bundled}license_finder --quiet")
             end
           end
         end
@@ -53,6 +56,12 @@ module OrganizationLicenseAudit
     rescue Exception => e
       raise if e.is_a?(Interrupt) # user interrupted
       $stderr.puts "Error auditing #{repo.project} (#{e})"
+    end
+
+    # license_finder loads all gems in the target repo, which fails if they are not available in the current ruby installation
+    # so we have to add the gems in vendor/bundle to the gems currently available from this bundle
+    def combined_gem_path
+      "GEM_PATH=#{`gem env path`.strip}:#{BUNDLE_PATH}/ruby/* "
     end
 
     def in_temp_dir(&block)
@@ -69,7 +78,7 @@ module OrganizationLicenseAudit
 
     # http://grosser.it/2010/12/11/sh-without-rake
     def sh(cmd)
-      $stderr.puts cmd
+      $stderr.puts cmd.sub(/GEM_PATH=[^ ]+ /, "")
       IO.popen(cmd) do |pipe|
         while str = pipe.gets
           $stderr.puts str
