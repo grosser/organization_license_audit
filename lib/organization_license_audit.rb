@@ -91,6 +91,10 @@ end
 
 Bundler::OrganizationAudit::Repo.class_eval do
   def clone_url
-    url.sub("https://", "git@").sub("/", ":") + ".git"
+    if private?
+      url.sub("https://", "git@").sub("/", ":") + ".git"
+    else
+      url + ".git"
+    end
   end
 end
