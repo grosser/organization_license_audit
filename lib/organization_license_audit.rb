@@ -4,21 +4,34 @@ require "organization_audit"
 
 module OrganizationLicenseAudit
   BUNDLE_PATH = "vendor/bundle"
+  RESULT_LINE = /(^[a-z_\d-]+), ([^,]+), (.+)/
 
   class << self
     def run(options)
       bad = find_bad(options)
-      # TODO nice summary like licenses / failed
-      if bad.size == 0
-        0
-      else
+      if bad.any?
         $stderr.puts "Failed:"
-        puts bad
+        bad.each do |repo, output|
+          error = if unapproved = extract_error(output)
+            unapproved.map(&:last).flatten.uniq.sort.join(", ")
+          else
+            "Unknown error"
+          end
+          puts "#{error} -- #{repo}"
+        end
         1
+      else
+        0
       end
     end
 
     private
+
+    def extract_error(output)
+      if output.include?("Dependencies that need approval")
+        output.split("\n").grep(RESULT_LINE) { [$1, $3] }
+      end
+    end
 
     def download_file(repo, file)
       return unless content = repo.content(file)
@@ -26,30 +39,29 @@ module OrganizationLicenseAudit
     end
 
     def find_bad(options)
-      OrganizationAudit.all(options).select do |repo|
+      OrganizationAudit.all(options).map do |repo|
         next if options[:ignore_gems] and repo.gem?
-        audit_repo(repo, options)
-      end
+        success, output = audit_repo(repo, options)
+        $stderr.puts ""
+        [repo, output] unless success
+      end.compact
     end
 
     def audit_repo(repo, options)
-      bad = false
       $stderr.puts repo.name
       in_temp_dir do
-        raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet")
+        raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet").first
         Dir.chdir repo.name do
           with_clean_env do
             bundled = File.exist?("Gemfile")
-            raise "Failed to bundle" if bundled && !sh("bundle --path #{BUNDLE_PATH} --quiet")
+            raise "Failed to bundle" if bundled && !sh("bundle --path #{BUNDLE_PATH} --quiet").first
             options[:whitelist].each do |license|
               raise "failed to approve #{license}" unless system("license_finder whitelist add '#{license}' >/dev/null")
             end
-            bad = !sh("#{combined_gem_path if bundled}license_finder --quiet")
+            sh("#{combined_gem_path if bundled}license_finder --quiet")
           end
         end
       end
-      $stderr.puts ""
-      bad
     rescue Exception => e
       raise if e.is_a?(Interrupt) # user interrupted
       $stderr.puts "Error auditing #{repo.name} (#{e})"
@@ -76,13 +88,15 @@ module OrganizationLicenseAudit
 
     # http://grosser.it/2010/12/11/sh-without-rake
     def sh(cmd)
+      output = ""
       $stderr.puts cmd.sub(/GEM_PATH=[^ ]+ /, "")
       IO.popen(cmd) do |pipe|
         while str = pipe.gets
+          output << str
           $stderr.puts str
         end
       end
-      $?.success?
+      [$?.success?, output]
     end
   end
 end
