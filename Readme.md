@@ -58,6 +58,9 @@ organization-license-audit \
   --token yyy
 ```
 
+### CSV
+just add `--csv` to get a nice csv report
+
 ### Private repos
 
 ```Bash

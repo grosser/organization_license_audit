@@ -5,20 +5,26 @@ require "organization_audit"
 module OrganizationLicenseAudit
   BUNDLE_PATH = "vendor/bundle"
   RESULT_LINE = /(^[a-z_\d-]+), ([^,]+), (.+)/
+  APPROVAL_HEADING = "Dependencies that need approval"
 
   class << self
     def run(options)
       bad = find_bad(options)
       if bad.any?
         $stderr.puts "Failed:"
-        bad.each do |repo, output|
-          error = if unapproved = extract_error(output)
-            unapproved.map(&:last).flatten.uniq.sort.join(", ")
-          else
-            "Unknown error"
-          end
-          puts "#{error} -- #{repo}"
+
+        errors = bad.map { |repo, output| [repo, extract_error(output)] }
+
+        errors.each do |repo, unapproved|
+          puts "#{describe_error(unapproved)} -- #{repo}"
         end
+
+        if options[:csv]
+          puts
+          puts "CSV:"
+          puts csv(errors)
+        end
+
         1
       else
         0
@@ -27,9 +33,41 @@ module OrganizationLicenseAudit
 
     private
 
+    def describe_error(unapproved)
+      if unapproved
+        unapproved.map(&:last).flatten.uniq.sort.join(", ")
+      else
+        "Unknown error"
+      end
+    end
+
+    def csv(errors)
+      require "csv"
+      CSV.generate do |csv|
+        csv << ["repo", "dependency", "license"]
+        errors.each do |repo, errors|
+          if errors
+            errors.each do |gem, license|
+              csv << [repo.url, gem, license]
+            end
+          else
+            csv << [repo.url, "Unknown error"]
+          end
+        end
+      end
+    end
+
     def extract_error(output)
-      if output.include?("Dependencies that need approval")
-        output.split("\n").grep(RESULT_LINE) { [$1, $3] }
+      if output.include?(APPROVAL_HEADING)
+        output = output.split("\n")
+        output.reject! { |l| l.include?(APPROVAL_HEADING) || l.strip == "" }
+        output.map do |line|
+          if line =~ RESULT_LINE
+            [$1, $3]
+          else
+            ["unparsable-line", line] # do not swallow the unknown or we might hide an error
+          end
+        end
       end
     end
 
