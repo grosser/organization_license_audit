@@ -27,6 +27,13 @@ describe OrganizationLicenseAudit do
       result.strip.should include "CSV:\nrepo,dependency,license\nhttps://github.com/user-with-unpatched-apps/unpatched,bundler,MIT\nhttps://github.com/user-with-unpatched-apps/unpatched,json,ruby"
     end
 
+    it "prints nice csv with given separator" do
+      result = audit("--user user-with-unpatched-apps --csv #{public_token} --csv '\\t'", :fail => true)
+      result.strip.should include "Dependencies that need approval:"
+      result.strip.should include "json, 1.5.3, ruby"
+      result.strip.should include "CSV:\nrepo\tdependency\tlicense\nhttps://github.com/user-with-unpatched-apps/unpatched\tbundler\tMIT\nhttps://github.com/user-with-unpatched-apps/unpatched\tjson\truby"
+    end
+
     it "ignores projects in --ignore" do
       result = audit("--user user-with-unpatched-apps --ignore https://github.com/user-with-unpatched-apps/unpatched 2>/dev/null #{public_token}", :keep_output => true)
       result.should == ""

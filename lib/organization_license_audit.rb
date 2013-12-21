@@ -22,7 +22,7 @@ module OrganizationLicenseAudit
         if options[:csv]
           puts
           puts "CSV:"
-          puts csv(errors)
+          puts csv(errors, options[:csv])
         end
 
         1
@@ -41,9 +41,9 @@ module OrganizationLicenseAudit
       end
     end
 
-    def csv(errors)
+    def csv(errors, col_sep)
       require "csv"
-      CSV.generate do |csv|
+      CSV.generate(:col_sep => col_sep) do |csv|
         csv << ["repo", "dependency", "license"]
         errors.each do |repo, errors|
           if errors

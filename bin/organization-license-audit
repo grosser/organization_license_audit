@@ -25,7 +25,11 @@ Usage:
 Options:
 BANNER
   OrganizationAudit.optparse(parser, options)
-  parser.on("--csv", "Dump a csv summary") { options[:csv] = true }
+  parser.on("--csv [SEPARATOR]", String, "Dump a csv summary") do |separator|
+    separator ||= ","
+    separator.sub!('\t', "\t") # passing tab is not easy, so be nice (useful for pasting in google spreadsheet)
+    options[:csv] = separator
+  end
   parser.on("--ignore-gems", "Ignore repos that have a %{repo}.gemspec") { options[:ignore_gems] = true }
   parser.on("-w", "--whitelist=LICENSES", String, "Comma separated list of licenses") { |whitelist| options[:whitelist] = whitelist.split(",") }
   parser.on("-h", "--help", "Show this.") { puts parser; exit }

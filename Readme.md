@@ -59,7 +59,7 @@ organization-license-audit \
 ```
 
 ### CSV
-just add `--csv` to get a nice csv report
+just add `--csv` to get a nice csv report (`--csv '\t'` for tab separated -> paste into google docs)
 
 ### Private repos
 
