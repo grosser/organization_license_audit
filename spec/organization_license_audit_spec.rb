@@ -7,6 +7,40 @@ describe OrganizationLicenseAudit do
     OrganizationLicenseAudit::VERSION.should =~ /^[\.\da-z]+$/
   end
 
+  context ".use_cache_dir_to_bundle" do
+    def call(*args)
+      OrganizationLicenseAudit.send(:use_cache_dir_to_bundle, *args)
+    end
+
+    let(:cache) { File.expand_path("cache") }
+
+    around { |example| Dir.mktmpdir { |dir| Dir.chdir(dir, &example) } }
+    before { FileUtils.mkdir(cache) }
+
+    it "symlinks default cache path" do
+      call(cache)
+      File.directory?("#{cache}/default").should == true
+      File.directory?("vendor").should == true
+      File.realpath("vendor/bundle").should == "#{cache}/default"
+    end
+
+    it "symlinks .ruby-version cache path" do
+      File.write(".ruby-version", "1.2.3")
+      call(cache)
+      File.directory?("#{cache}/1.2.3").should == true
+      File.directory?("vendor").should == true
+      File.realpath("vendor/bundle").should == "#{cache}/1.2.3"
+    end
+
+    it "symlinks .rvmrc cache path" do
+      File.write(".rvmrc", "rvm use 1.2.3")
+      call(cache)
+      File.directory?("#{cache}/rvm_use_1.2.3").should == true
+      File.directory?("vendor").should == true
+      File.realpath("vendor/bundle").should == "#{cache}/rvm_use_1.2.3"
+    end
+  end
+
   context "CLI" do
     it "succeeds with approved" do
       result = audit("--user user-with-unpatched-apps --whitelist 'MIT,Ruby,Apache 2.0' #{public_token}")

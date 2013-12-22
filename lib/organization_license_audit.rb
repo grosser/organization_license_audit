@@ -77,22 +77,28 @@ module OrganizationLicenseAudit
     end
 
     def find_bad(options)
-      OrganizationAudit.all(options).map do |repo|
-        next if options[:ignore_gems] and repo.gem?
-        success, output = audit_repo(repo, options)
-        $stderr.puts ""
-        [repo, output] unless success
-      end.compact
+      Dir.mktmpdir do |bundle_cache_dir|
+        OrganizationAudit.all(options).map do |repo|
+          next if options[:ignore_gems] and repo.gem?
+          success, output = audit_repo(repo, bundle_cache_dir, options)
+          $stderr.puts ""
+          [repo, output] unless success
+        end.compact
+      end
     end
 
-    def audit_repo(repo, options)
+    def audit_repo(repo, bundle_cache_dir, options)
       $stderr.puts repo.name
       in_temp_dir do
         raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet").first
         Dir.chdir repo.name do
           with_clean_env do
             bundled = File.exist?("Gemfile")
-            raise "Failed to bundle" if bundled && !sh("bundle --path #{BUNDLE_PATH} --quiet").first
+            if bundled
+              use_cache_dir_to_bundle(bundle_cache_dir)
+              raise "Failed to bundle" unless sh("bundle --path #{BUNDLE_PATH} --quiet").first
+            end
+
             options[:whitelist].each do |license|
               raise "failed to approve #{license}" unless system("license_finder whitelist add '#{license}' >/dev/null")
             end
@@ -106,7 +112,23 @@ module OrganizationLicenseAudit
       true
     end
 
-    # license_finder loads all gems in the target repo, which fails if they are not available in the current ruby installation
+    def use_cache_dir_to_bundle(cache_dir)
+      cache_dir = File.join(cache_dir, ruby_cache)
+      FileUtils.mkdir_p cache_dir
+      FileUtils.mkdir_p File.dirname(BUNDLE_PATH)
+      FileUtils.symlink cache_dir, BUNDLE_PATH
+    end
+
+    # use one directory per ruby-version (not the same for jruby or different patch releases)
+    def ruby_cache
+      ruby_version = [".ruby-version", ".rvmrc"].detect { |f| File.exist?(f) }
+      ruby_version = File.read(ruby_version) if ruby_version
+      ruby_version ||= "default"
+      ruby_version.gsub!(/[^a-z\d\.]/, "_") # .rvmrc might include weirdness...
+      ruby_version
+    end
+
+    # license_finder needs to find all gems in the target repo, which fails if their path is not in the GEM_PATH
     # so we have to add the gems in vendor/bundle to the gems currently available from this bundle
     def combined_gem_path
       "GEM_PATH=#{`gem env path`.strip}:#{BUNDLE_PATH}/ruby/* "
