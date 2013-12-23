@@ -6,6 +6,8 @@ module OrganizationLicenseAudit
   BUNDLE_PATH = "vendor/bundle"
   RESULT_LINE = /(^[a-z_\d-]+), ([^,]+), (.+)/
   APPROVAL_HEADING = "Dependencies that need approval"
+  NPM_PACKAGE_FILE = "package.json"
+  BUNDLER_PACKAGE_FILE = "Gemfile"
 
   class << self
     def run(options)
@@ -92,7 +94,7 @@ module OrganizationLicenseAudit
       in_temp_dir do
         raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet").first
         Dir.chdir repo.name do
-          with_clean_env { audit_project(bundle_cache_dir, options) }
+          audit_project(bundle_cache_dir, options)
         end
       end
     rescue Exception => e
@@ -102,11 +104,13 @@ module OrganizationLicenseAudit
     end
 
     def audit_project(bundle_cache_dir, options)
-      bundled = prepare_bundler bundle_cache_dir
-      prepare_npm
-      whitelist_licences options[:whitelist]
+      with_clean_env do
+        bundled = prepare_bundler bundle_cache_dir, options
+        prepare_npm options
+        whitelist_licences options[:whitelist]
 
-      sh("#{combined_gem_path if bundled}license_finder --quiet")
+        sh "#{combined_gem_path if bundled}license_finder --quiet"
+      end
     end
 
     def whitelist_licences(licenses)
@@ -117,16 +121,16 @@ module OrganizationLicenseAudit
       end
     end
 
-    def prepare_bundler(bundle_cache_dir)
-      if File.exist?("Gemfile")
+    def prepare_bundler(bundle_cache_dir, options)
+      with_or_without "bundler", BUNDLER_PACKAGE_FILE, options do
         use_cache_dir_to_bundle(bundle_cache_dir)
         raise "Failed to bundle" unless sh("bundle --path #{BUNDLE_PATH} --quiet").first
         true
       end
     end
 
-    def prepare_npm
-      if File.exist?("package.json")
+    def prepare_npm(options)
+      with_or_without "npm", NPM_PACKAGE_FILE, options do
         sh "npm install --quiet"
       end
     end
@@ -176,6 +180,15 @@ module OrganizationLicenseAudit
         end
       end
       [$?.success?, output]
+    end
+
+    def with_or_without(thing, file, options)
+      return unless File.exist?(file)
+      if (options[:without] || []).include?(thing)
+        File.unlink(file)
+      else
+        yield
+      end
     end
   end
 end

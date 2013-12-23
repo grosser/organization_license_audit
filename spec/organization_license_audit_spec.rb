@@ -43,21 +43,41 @@ describe OrganizationLicenseAudit do
 
   context ".audit_project" do
     around { |example| Dir.mktmpdir { |dir| Dir.chdir(dir, &example) } }
+    before { $stderr.stub(:puts) }
+
+    def call(*args)
+      OrganizationLicenseAudit.send(:audit_project, *args)
+    end
 
     context "a project with packages.json" do
-      def call(*args)
-        OrganizationLicenseAudit.send(:audit_project, *args)
-      end
-
       before do
         File.write("Readme", "XXX") # silence npm warnings
         File.write("package.json", '{"dependencies": { "sigmund": "1.0.0" }, "description": "XX", "repository": "XX" }')
       end
 
       it "runs npm" do
-        $stderr.stub(:puts)
         call("xxx", :whitelist => []).first.should == false
         call("xxx", :whitelist => ["BSD"]).first.should == true
+      end
+
+      it "ignores npm with --without npm" do
+        call("xxx", :whitelist => [], :without => ["npm"]).first.should == true
+      end
+    end
+
+    context "a project with Gemfile" do
+      before do
+        FileUtils.mkdir("xxx")
+        File.write("Gemfile", "source 'https://rubygems.org'\ngem 'rake'")
+      end
+
+      it "runs bundler" do
+        call(File.expand_path("xxx"), :whitelist => []).first.should == false
+        call(File.expand_path("xxx"), :whitelist => ["MIT"]).first.should == true
+      end
+
+      it "ignores bundler with --without bundler" do
+        call(File.expand_path("xxx"), :whitelist => [], :without => ["bundler"]).first.should == true
       end
     end
   end
