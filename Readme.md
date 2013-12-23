@@ -58,6 +58,10 @@ organization-license-audit \
   --token yyy
 ```
 
+### Without
+not interested in npm and bundler ?
+`--without npm,bundler`
+
 ### CSV
 just add `--csv` to get a nice csv report (`--csv '\t'` for tab separated -> paste into google docs)
 

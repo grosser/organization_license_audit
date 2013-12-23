@@ -95,6 +95,11 @@ describe OrganizationLicenseAudit do
       result.strip.should include "Failed:\nMIT, ruby -- https://github.com/user-with-unpatched-apps/unpatched -- user-with-unpatched-apps <michael+unpatched@grosser.it>"
     end
 
+    it "succeeds when all unapproved are in without" do
+      result = audit("--user user-with-unpatched-apps --without bundler #{public_token}")
+      result.strip.should == "unpatched\ngit clone https://github.com/user-with-unpatched-apps/unpatched.git --depth 1 --quiet\nlicense_finder --quiet\nAll gems are approved for use"
+    end
+
     it "prints nice csv" do
       result = audit("--user user-with-unpatched-apps --csv #{public_token}", :fail => true)
       result.strip.should include "Dependencies that need approval:"
