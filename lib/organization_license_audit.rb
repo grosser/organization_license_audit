@@ -92,24 +92,43 @@ module OrganizationLicenseAudit
       in_temp_dir do
         raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet").first
         Dir.chdir repo.name do
-          with_clean_env do
-            bundled = File.exist?("Gemfile")
-            if bundled
-              use_cache_dir_to_bundle(bundle_cache_dir)
-              raise "Failed to bundle" unless sh("bundle --path #{BUNDLE_PATH} --quiet").first
-            end
-
-            options[:whitelist].each do |license|
-              raise "failed to approve #{license}" unless system("license_finder whitelist add '#{license}' >/dev/null")
-            end
-            sh("#{combined_gem_path if bundled}license_finder --quiet")
-          end
+          with_clean_env { audit_project(bundle_cache_dir, options) }
         end
       end
     rescue Exception => e
       raise if e.is_a?(Interrupt) # user interrupted
       $stderr.puts "Error auditing #{repo.name} (#{e})"
       true
+    end
+
+    def audit_project(bundle_cache_dir, options)
+      bundled = prepare_bundler bundle_cache_dir
+      prepare_npm
+      whitelist_licences options[:whitelist]
+
+      sh("#{combined_gem_path if bundled}license_finder --quiet")
+    end
+
+    def whitelist_licences(licenses)
+      licenses.each do |license|
+        unless system("license_finder whitelist add '#{license}' >/dev/null")
+          raise "failed to approve #{license}"
+        end
+      end
+    end
+
+    def prepare_bundler(bundle_cache_dir)
+      if File.exist?("Gemfile")
+        use_cache_dir_to_bundle(bundle_cache_dir)
+        raise "Failed to bundle" unless sh("bundle --path #{BUNDLE_PATH} --quiet").first
+        true
+      end
+    end
+
+    def prepare_npm
+      if File.exist?("package.json")
+        sh "npm install --quiet"
+      end
     end
 
     def use_cache_dir_to_bundle(cache_dir)

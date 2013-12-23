@@ -41,6 +41,27 @@ describe OrganizationLicenseAudit do
     end
   end
 
+  context ".audit_project" do
+    around { |example| Dir.mktmpdir { |dir| Dir.chdir(dir, &example) } }
+
+    context "a project with packages.json" do
+      def call(*args)
+        OrganizationLicenseAudit.send(:audit_project, *args)
+      end
+
+      before do
+        File.write("Readme", "XXX") # silence npm warnings
+        File.write("package.json", '{"dependencies": { "sigmund": "1.0.0" }, "description": "XX", "repository": "XX" }')
+      end
+
+      it "runs npm" do
+        $stderr.stub(:puts)
+        call("xxx", :whitelist => []).first.should == false
+        call("xxx", :whitelist => ["BSD"]).first.should == true
+      end
+    end
+  end
+
   context "CLI" do
     it "succeeds with approved" do
       result = audit("--user user-with-unpatched-apps --whitelist 'MIT,Ruby,Apache 2.0' #{public_token}")
