@@ -4,7 +4,7 @@ require "organization_audit"
 
 module OrganizationLicenseAudit
   BUNDLE_PATH = "vendor/bundle"
-  RESULT_LINE = /(^[a-z_\d-]+), ([^,]+), (.+)/
+  RESULT_LINE = /(^[a-z_\d\.-]+), ([^,]+), (.+)/i
   APPROVAL_HEADING = "Dependencies that need approval"
   NPM_PACKAGE_FILE = "package.json"
   BUNDLER_PACKAGE_FILE = "Gemfile"
