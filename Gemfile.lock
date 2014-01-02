@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    organization_license_audit (1.0.3)
+    organization_license_audit (1.0.4)
       license_finder
       organization_audit
 
