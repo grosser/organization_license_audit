@@ -16,5 +16,5 @@ Gem::Specification.new name, OrganizationLicenseAudit::VERSION do |s|
   end
   s.executables = ["organization-license-audit"]
   s.add_runtime_dependency "organization_audit"
-  s.add_runtime_dependency "license_finder"
+  s.add_runtime_dependency "license_finder", ">= 0.9.4"
 end

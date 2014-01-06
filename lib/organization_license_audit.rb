@@ -1,6 +1,7 @@
 require "organization_license_audit/version"
 require "tmpdir"
 require "organization_audit"
+require "shellwords"
 
 module OrganizationLicenseAudit
   BUNDLE_PATH = "vendor/bundle"
@@ -114,10 +115,10 @@ module OrganizationLicenseAudit
     end
 
     def whitelist_licences(licenses)
-      licenses.each do |license|
-        unless system("license_finder whitelist add '#{license}' >/dev/null")
-          raise "failed to approve #{license}"
-        end
+      return if licenses.none?
+      licenses = licenses.map { |l| Shellwords.escape(l) }.join(" ")
+      unless system("license_finder whitelist add #{licenses} >/dev/null")
+        raise "failed to approve #{license}"
       end
     end
 

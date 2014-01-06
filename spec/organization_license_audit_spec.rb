@@ -82,10 +82,36 @@ describe OrganizationLicenseAudit do
     end
   end
 
+  context ".whitelist_licences" do
+    def call(*args)
+      OrganizationLicenseAudit.send(:whitelist_licences, *args)
+    end
+
+    it "does nothing without licenses" do
+      OrganizationLicenseAudit.should_receive(:system).never
+      call([])
+    end
+
+    it "whitelists 1" do
+      OrganizationLicenseAudit.should_receive(:system).with("license_finder whitelist add BSD >/dev/null").and_return true
+      call(["BSD"])
+    end
+
+    it "whitelists many" do
+      OrganizationLicenseAudit.should_receive(:system).with("license_finder whitelist add BSD Apache\\ 2.0 >/dev/null").and_return true
+      call(["BSD", "Apache 2.0"])
+    end
+
+    it "raises when whitelisting fails" do
+      OrganizationLicenseAudit.should_receive(:system).and_return false
+      expect { call(["BSD"]) }.to raise_error
+    end
+  end
+
   context "CLI" do
     it "succeeds with approved" do
       result = audit("--user user-with-unpatched-apps --whitelist 'MIT,Ruby,Apache 2.0' #{public_token}")
-      result.strip.should == "unpatched\ngit clone https://github.com/user-with-unpatched-apps/unpatched.git --depth 1 --quiet\nbundle --path vendor/bundle --quiet\nlicense_finder --quiet\nAll gems are approved for use"
+      result.strip.should == "unpatched\ngit clone https://github.com/user-with-unpatched-apps/unpatched.git --depth 1 --quiet\nbundle --path vendor/bundle --quiet\nlicense_finder --quiet\nAll dependencies are approved for use"
     end
 
     it "fails with unapproved" do
@@ -97,7 +123,7 @@ describe OrganizationLicenseAudit do
 
     it "succeeds when all unapproved are in without" do
       result = audit("--user user-with-unpatched-apps --without bundler #{public_token}")
-      result.strip.should == "unpatched\ngit clone https://github.com/user-with-unpatched-apps/unpatched.git --depth 1 --quiet\nlicense_finder --quiet\nAll gems are approved for use"
+      result.strip.should == "unpatched\ngit clone https://github.com/user-with-unpatched-apps/unpatched.git --depth 1 --quiet\nlicense_finder --quiet\nAll dependencies are approved for use"
     end
 
     it "prints nice csv" do
