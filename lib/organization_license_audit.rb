@@ -8,6 +8,7 @@ module OrganizationLicenseAudit
   RESULT_LINE = /(^[a-z_\d\.-]+), ([^,]+), (.+)/i
   APPROVAL_HEADING = "Dependencies that need approval"
   NPM_PACKAGE_FILE = "package.json"
+  BOWER_PACKAGE_FILE = "bower.json"
   BUNDLER_PACKAGE_FILE = "Gemfile"
 
   class << self
@@ -108,6 +109,7 @@ module OrganizationLicenseAudit
       with_clean_env do
         bundled = prepare_bundler bundle_cache_dir, options
         prepare_npm options
+        prepare_bower options
         whitelist_licences options[:whitelist]
 
         sh "#{combined_gem_path if bundled}license_finder --quiet"
@@ -134,6 +136,10 @@ module OrganizationLicenseAudit
       with_or_without "npm", NPM_PACKAGE_FILE, options do
         sh "npm install --quiet"
       end
+    end
+
+    def prepare_bower(options)
+      with_or_without "bower", BOWER_PACKAGE_FILE, options
     end
 
     def use_cache_dir_to_bundle(cache_dir)
@@ -188,7 +194,7 @@ module OrganizationLicenseAudit
       if (options[:without] || []).include?(thing)
         File.unlink(file)
       else
-        yield
+        yield if block_given?
       end
     end
   end
