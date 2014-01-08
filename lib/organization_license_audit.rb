@@ -120,7 +120,7 @@ module OrganizationLicenseAudit
       return if licenses.none?
       licenses = licenses.map { |l| Shellwords.escape(l) }.join(" ")
       unless system("license_finder whitelist add #{licenses} >/dev/null")
-        raise "failed to approve #{license}"
+        raise "failed to approve #{licenses}"
       end
     end
 

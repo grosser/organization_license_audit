@@ -65,6 +65,21 @@ describe OrganizationLicenseAudit do
       end
     end
 
+    context "a project with bower.json" do
+      before do
+        File.write("bower.json", '{"name": "foo", "version": "1.40.1", "dependencies": { "lodash": "2.4.0" }}')
+      end
+
+      xit "runs bower" do
+        call("xxx", :whitelist => []).first.should == false
+        call("xxx", :whitelist => ["MIT"]).first.should == true
+      end
+
+      xit "ignores bower with --without bower" do
+        call("xxx", :whitelist => [], :without => ["bower"]).first.should == true
+      end
+    end
+
     context "a project with Gemfile" do
       before do
         FileUtils.mkdir("xxx")
