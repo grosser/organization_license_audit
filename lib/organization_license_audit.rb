@@ -111,6 +111,7 @@ module OrganizationLicenseAudit
       supported = ["config/license_finder.yml"]
       PACKAGE_FILES.each { |thing, file| supported << file if wanted?(thing, options) }
       supported.concat ["Gemfile.lock", *list.grep(/\.gemspec$/)] if wanted?(:bundler, options)
+      supported.concat list.grep(/version\.rb|VERSION$/) # add version files so gemspecs can build
       supported & list
     end
 

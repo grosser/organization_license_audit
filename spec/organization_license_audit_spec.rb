@@ -123,6 +123,24 @@ describe OrganizationLicenseAudit do
     end
   end
 
+  context ".needed_files" do
+    def call(*args)
+      OrganizationLicenseAudit.send(:needed_files, *args)
+    end
+
+    let(:repo) { stub }
+
+    it "includes VERSION" do
+      repo.should_receive(:list).and_return ["a", "VERSION", "Gemfile", "lib/foo/version.rb"]
+      call(repo, {}).should =~ ["VERSION", "Gemfile", "lib/foo/version.rb"]
+    end
+
+    it "does not include Gemfile when ignored" do
+      repo.should_receive(:list).and_return ["Gemfile"]
+      call(repo, :without => ["bundler"]).should =~ []
+    end
+  end
+
   context "CLI" do
     it "succeeds with approved" do
       result = audit("--user user-with-unpatched-apps --whitelist 'MIT,Ruby,Apache 2.0' #{public_token}")
