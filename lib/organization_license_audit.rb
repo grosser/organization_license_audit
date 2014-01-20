@@ -7,9 +7,11 @@ module OrganizationLicenseAudit
   BUNDLE_PATH = "vendor/bundle"
   RESULT_LINE = /(^[a-z_\d\.-]+), ([^,]+), (.+)/i
   APPROVAL_HEADING = "Dependencies that need approval"
-  NPM_PACKAGE_FILE = "package.json"
-  BOWER_PACKAGE_FILE = "bower.json"
-  BUNDLER_PACKAGE_FILE = "Gemfile"
+  PACKAGE_FILES = {
+    :bundler => "Gemfile",
+    :npm     => "package.json",
+    :bower   => "bower.json"
+  }
 
   class << self
     def run(options)
@@ -77,6 +79,7 @@ module OrganizationLicenseAudit
 
     def download_file(repo, file)
       return unless content = repo.content(file)
+      FileUtils.mkdir_p(File.dirname(file))
       File.write(file, content)
     end
 
@@ -94,15 +97,21 @@ module OrganizationLicenseAudit
     def audit_repo(repo, bundle_cache_dir, options)
       $stderr.puts repo.name
       in_temp_dir do
-        raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet").first
-        Dir.chdir repo.name do
-          audit_project(bundle_cache_dir, options)
-        end
+        needed_files(repo, options).each { |path| download_file(repo, path) }
+        audit_project(bundle_cache_dir, options)
       end
     rescue Exception => e
       raise if e.is_a?(Interrupt) # user interrupted
       $stderr.puts "Error auditing #{repo.name} (#{e})"
       true
+    end
+
+    def needed_files(repo, options)
+      list = repo.list
+      supported = ["config/license_finder.yml"]
+      PACKAGE_FILES.each { |thing, file| supported << file if wanted?(thing, options) }
+      supported.concat ["Gemfile.lock", *list.grep(/\.gemspec$/)] if wanted?(:bundler, options)
+      supported & list
     end
 
     def audit_project(bundle_cache_dir, options)
@@ -125,7 +134,7 @@ module OrganizationLicenseAudit
     end
 
     def prepare_bundler(bundle_cache_dir, options)
-      with_or_without "bundler", BUNDLER_PACKAGE_FILE, options do
+      with_or_without :bundler, options do
         use_cache_dir_to_bundle(bundle_cache_dir)
         raise "Failed to bundle" unless sh("bundle --path #{BUNDLE_PATH} --quiet").first
         true
@@ -133,13 +142,13 @@ module OrganizationLicenseAudit
     end
 
     def prepare_npm(options)
-      with_or_without "npm", NPM_PACKAGE_FILE, options do
+      with_or_without :npm, options do
         sh "npm install --quiet"
       end
     end
 
     def prepare_bower(options)
-      with_or_without "bower", BOWER_PACKAGE_FILE, options
+      with_or_without :bower, options
     end
 
     def use_cache_dir_to_bundle(cache_dir)
@@ -189,13 +198,24 @@ module OrganizationLicenseAudit
       [$?.success?, output]
     end
 
-    def with_or_without(thing, file, options)
+    def wanted?(thing, options)
+      not (options[:without] || []).include?(thing.to_s)
+    end
+
+    def with_or_without(thing, options)
+      file = PACKAGE_FILES.fetch(thing)
       return unless File.exist?(file)
-      if (options[:without] || []).include?(thing)
-        File.unlink(file)
-      else
+      if wanted?(thing, options)
         yield if block_given?
+      else
+        File.unlink(file)
       end
     end
+  end
+end
+
+OrganizationAudit::Repo.class_eval do
+  def list
+    call_api("contents?branch=#{branch}").map { |file| file["path"] }
   end
 end

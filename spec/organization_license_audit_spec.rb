@@ -126,7 +126,7 @@ describe OrganizationLicenseAudit do
   context "CLI" do
     it "succeeds with approved" do
       result = audit("--user user-with-unpatched-apps --whitelist 'MIT,Ruby,Apache 2.0' #{public_token}")
-      result.strip.should == "unpatched\ngit clone https://github.com/user-with-unpatched-apps/unpatched.git --depth 1 --quiet\nbundle --path vendor/bundle --quiet\nlicense_finder --quiet\nAll dependencies are approved for use"
+      result.strip.should == "unpatched\nbundle --path vendor/bundle --quiet\nlicense_finder --quiet\nAll dependencies are approved for use"
     end
 
     it "fails with unapproved" do
@@ -138,7 +138,7 @@ describe OrganizationLicenseAudit do
 
     it "succeeds when all unapproved are in without" do
       result = audit("--user user-with-unpatched-apps --without bundler #{public_token}")
-      result.strip.should == "unpatched\ngit clone https://github.com/user-with-unpatched-apps/unpatched.git --depth 1 --quiet\nlicense_finder --quiet\nAll dependencies are approved for use"
+      result.strip.should == "unpatched\nlicense_finder --quiet\nAll dependencies are approved for use"
     end
 
     it "prints nice csv" do
