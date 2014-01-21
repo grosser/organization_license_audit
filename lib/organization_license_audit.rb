@@ -86,7 +86,7 @@ module OrganizationLicenseAudit
     def find_bad(options)
       Dir.mktmpdir do |bundle_cache_dir|
         OrganizationAudit.all(options).map do |repo|
-          next if options[:ignore_gems] and repo.gem?
+          next if options[:ignore_gems] && repo.gem?
           success, output = audit_repo(repo, bundle_cache_dir, options)
           $stderr.puts ""
           [repo, output] unless success
@@ -97,7 +97,13 @@ module OrganizationLicenseAudit
     def audit_repo(repo, bundle_cache_dir, options)
       $stderr.puts repo.name
       in_temp_dir do
-        needed_files(repo, options).each { |path| download_file(repo, path) }
+        if repo.gem?
+          # download everything since gemspecs can require stuff (also gems are mostly small...)
+          raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet .").first
+        else
+          # download only the files we need to save time on giant projects
+          needed_files(repo, options).each { |path| download_file(repo, path) }
+        end
         audit_project(bundle_cache_dir, options)
       end
     rescue Exception => e
@@ -107,11 +113,11 @@ module OrganizationLicenseAudit
     end
 
     def needed_files(repo, options)
-      list = repo.list
+      list = repo.file_list
+      list += repo.file_list("config") if repo.directory?("config")
       supported = ["config/license_finder.yml"]
-      PACKAGE_FILES.each { |thing, file| supported << file if wanted?(thing, options) }
-      supported.concat ["Gemfile.lock", *list.grep(/\.gemspec$/)] if wanted?(:bundler, options)
-      supported.concat list.grep(/version\.rb|VERSION$/) # add version files so gemspecs can build
+      supported << "Gemfile.lock" if wanted?(:bundler, options)
+      supported.concat PACKAGE_FILES.map { |t,f| f if wanted?(t, options) }.compact
       supported & list
     end
 
@@ -212,11 +218,5 @@ module OrganizationLicenseAudit
         File.unlink(file)
       end
     end
-  end
-end
-
-OrganizationAudit::Repo.class_eval do
-  def list
-    call_api("contents?branch=#{branch}").map { |file| file["path"] }
   end
 end

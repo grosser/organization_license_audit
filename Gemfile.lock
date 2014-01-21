@@ -23,7 +23,7 @@ GEM
       thor
     multi_json (1.8.2)
     multi_xml (0.5.5)
-    organization_audit (1.0.0)
+    organization_audit (1.0.2)
       json
     rake (10.0.3)
     rspec (2.12.0)

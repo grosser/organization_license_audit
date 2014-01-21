@@ -128,15 +128,10 @@ describe OrganizationLicenseAudit do
       OrganizationLicenseAudit.send(:needed_files, *args)
     end
 
-    let(:repo) { stub }
-
-    it "includes VERSION" do
-      repo.should_receive(:list).and_return ["a", "VERSION", "Gemfile", "lib/foo/version.rb"]
-      call(repo, {}).should =~ ["VERSION", "Gemfile", "lib/foo/version.rb"]
-    end
+    let(:repo) { stub(:directory? => false) }
 
     it "does not include Gemfile when ignored" do
-      repo.should_receive(:list).and_return ["Gemfile"]
+      repo.should_receive(:file_list).and_return ["Gemfile"]
       call(repo, :without => ["bundler"]).should =~ []
     end
   end
