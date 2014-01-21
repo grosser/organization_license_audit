@@ -85,7 +85,9 @@ module OrganizationLicenseAudit
 
     def find_bad(options)
       Dir.mktmpdir do |bundle_cache_dir|
-        OrganizationAudit.all(options).map do |repo|
+        repos = OrganizationAudit.all(options)
+        repos.select! { |r| r.name == options[:debug] } if options[:debug]
+        repos.map do |repo|
           next if options[:ignore_gems] && repo.gem?
           success, output = audit_repo(repo, bundle_cache_dir, options)
           $stderr.puts ""
