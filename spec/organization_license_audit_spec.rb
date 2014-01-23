@@ -56,12 +56,12 @@ describe OrganizationLicenseAudit do
       end
 
       it "runs npm" do
-        call("xxx", :whitelist => []).first.should == false
+        call("xxx").first.should == false
         call("xxx", :whitelist => ["BSD"]).first.should == true
       end
 
       it "ignores npm with --without npm" do
-        call("xxx", :whitelist => [], :without => ["npm"]).first.should == true
+        call("xxx", :without => ["npm"]).first.should == true
       end
     end
 
@@ -71,12 +71,12 @@ describe OrganizationLicenseAudit do
       end
 
       xit "runs bower" do
-        call("xxx", :whitelist => []).first.should == false
+        call("xxx").first.should == false
         call("xxx", :whitelist => ["MIT"]).first.should == true
       end
 
       xit "ignores bower with --without bower" do
-        call("xxx", :whitelist => [], :without => ["bower"]).first.should == true
+        call("xxx", :without => ["bower"]).first.should == true
       end
     end
 
@@ -87,12 +87,12 @@ describe OrganizationLicenseAudit do
       end
 
       it "runs bundler" do
-        call(File.expand_path("xxx"), :whitelist => []).first.should == false
+        call(File.expand_path("xxx")).first.should == false
         call(File.expand_path("xxx"), :whitelist => ["MIT"]).first.should == true
       end
 
       it "ignores bundler with --without bundler" do
-        call(File.expand_path("xxx"), :whitelist => [], :without => ["bundler"]).first.should == true
+        call(File.expand_path("xxx"), :without => ["bundler"]).first.should == true
       end
     end
   end
@@ -137,8 +137,13 @@ describe OrganizationLicenseAudit do
   end
 
   context "CLI" do
-    it "succeeds with approved" do
+    it "succeeds with whitelisted" do
       result = audit("--user user-with-unpatched-apps --whitelist 'MIT,Ruby,Apache 2.0' #{public_token}")
+      result.strip.should == "unpatched\nbundle --path vendor/bundle --quiet\nlicense_finder --quiet\nAll dependencies are approved for use"
+    end
+
+    it "succeeds with approved" do
+      result = audit("--user user-with-unpatched-apps --approve 'json,bundler' #{public_token}")
       result.strip.should == "unpatched\nbundle --path vendor/bundle --quiet\nlicense_finder --quiet\nAll dependencies are approved for use"
     end
 

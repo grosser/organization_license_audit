@@ -39,7 +39,7 @@ For someone else
 organization-license-audit --user grosser
 ```
 
-Ignore gems (ignores repos that have a %{repo}.gemspec)
+Ignore gems (ignores repos that have a *.gemspec)
 ```Bash
 organization-license-audit --ignore-gems
 ```
@@ -53,7 +53,7 @@ CI: ignore old/unmaintained proejcts, unfixable/unimportant
 ```
 organization-license-audit \
   --ignore https://github.com/xxx/a \
-  --ignore https://github.com/xxx/b \
+  --ignore b \
   --organization xxx \
   --token yyy
 ```
@@ -75,7 +75,14 @@ enter your password -> TOKEN
 organization-license-audit --user your-user --token TOKEN --organization your-organization
 ```
 
-### Approving / tracking dependencies
+### Mass Approving / Whitelisting
+```
+organization-license-audit ... \
+  --approve rake,rails,test-unit \
+  --whitelist MIT,BSD,LGPL \
+```
+
+### Approving / tracking single dependencies
 
 To approve individual licenses or add dependencies take a look at [licence_finder](https://github.com/pivotal/LicenseFinder)
 

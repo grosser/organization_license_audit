@@ -123,19 +123,35 @@ module OrganizationLicenseAudit
       supported & list
     end
 
-    def audit_project(bundle_cache_dir, options)
+    def audit_project(bundle_cache_dir, options={})
       with_clean_env do
         bundled = prepare_bundler bundle_cache_dir, options
         prepare_npm options
         prepare_bower options
         whitelist_licences options[:whitelist]
+        approve_dependencies options[:approve]
 
         sh "#{combined_gem_path if bundled}license_finder --quiet"
       end
     end
 
+    def approve_dependencies(dependencies)
+      return unless dependencies and dependencies.any?
+      require 'license_finder'
+      require 'license_finder/tables'
+      require 'license_finder/tables/dependency'
+      require 'license_finder/tables/license_alias'
+      require 'license_finder/tables/approval'
+      dependencies.each do |name|
+        dependency = LicenseFinder::Dependency.new(name: name, version: ">=0")
+        dependency.license = LicenseFinder::LicenseAlias.create(name: "other")
+        dependency.approval = LicenseFinder::Approval.create(:state => true)
+        dependency.save
+      end
+    end
+
     def whitelist_licences(licenses)
-      return if licenses.none?
+      return unless licenses and licenses.any?
       licenses = licenses.map { |l| Shellwords.escape(l) }.join(" ")
       unless system("license_finder whitelist add #{licenses} >/dev/null")
         raise "failed to approve #{licenses}"
