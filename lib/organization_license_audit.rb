@@ -86,7 +86,7 @@ module OrganizationLicenseAudit
     def find_bad(options)
       Dir.mktmpdir do |bundle_cache_dir|
         repos = OrganizationAudit.all(options)
-        repos.select! { |r| r.name == options[:debug] } if options[:debug]
+        repos.select! { |r| options[:debug].include?(r.name) } if options[:debug]
         repos.map do |repo|
           next if options[:ignore_gems] && repo.gem?
           success, output = audit_repo(repo, bundle_cache_dir, options)
@@ -148,6 +148,7 @@ module OrganizationLicenseAudit
         dependency.approval = LicenseFinder::Approval.create(:state => true)
         dependency.save
       end
+      DB.disconnect
     end
 
     def whitelist_licences(licenses)

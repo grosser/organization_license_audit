@@ -32,7 +32,7 @@ BANNER
     options[:csv] = separator
   end
   parser.on("--ignore-gems", "Ignore repos that have a %{repo}.gemspec") { options[:ignore_gems] = true }
-  parser.on("--debug REPO", String, "Only run on this repo for fast debugging") { |repo| options[:debug] = repo }
+  parser.on("--debug REPO", String, "Only run on this repo for fast debugging") { |repo| options[:debug] = repo.split(",") }
   parser.on("--without TYPES", String, "Do not run for bundler/npm dependencies (comma separated)") { |without| options[:without] = without.split(",") }
   parser.on("-w", "--whitelist LICENSES", String, "Comma separated list of licenses") { |whitelist| options[:whitelist] = whitelist.split(",") }
   parser.on("-a", "--approve DEPENDENCIES", String, "Comma separated list of dependencies to approve") { |approve| options[:approve] = approve.split(",") }
