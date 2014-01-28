@@ -111,7 +111,7 @@ module OrganizationLicenseAudit
     rescue Exception => e
       raise if e.is_a?(Interrupt) # user interrupted
       $stderr.puts "Error auditing #{repo.name} (#{e})"
-      true
+      false
     end
 
     def needed_files(repo, options)

@@ -41,6 +41,23 @@ describe OrganizationLicenseAudit do
     end
   end
 
+  context ".audit_repo" do
+    def call(*args)
+      OrganizationLicenseAudit.send(:audit_repo, *args)
+    end
+
+    it "fails when command raises" do
+      $stderr.should_receive(:puts).at_least(:once)
+      call(stub(:name => "foo"), nil, nil).should == false
+    end
+
+    it "stops on interrupt" do
+      mock = ""
+      mock.should_receive(:name).and_raise(Interrupt)
+      expect { call(mock, nil, nil) }.to raise_error(Interrupt)
+    end
+  end
+
   context ".audit_project" do
     around { |example| Dir.mktmpdir { |dir| Dir.chdir(dir, &example) } }
     before { $stderr.stub(:puts) }
