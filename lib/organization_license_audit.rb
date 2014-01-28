@@ -64,7 +64,7 @@ module OrganizationLicenseAudit
     end
 
     def extract_error(output)
-      if output.include?(APPROVAL_HEADING)
+      if output.to_s.include?(APPROVAL_HEADING)
         output = output.split("\n")
         output.reject! { |l| l.include?(APPROVAL_HEADING) || l.strip == "" }
         output.map do |line|
@@ -111,6 +111,7 @@ module OrganizationLicenseAudit
     rescue Exception => e
       raise if e.is_a?(Interrupt) # user interrupted
       $stderr.puts "Error auditing #{repo.name} (#{e})"
+      puts e.backtrace if options[:debug]
       false
     end
 
@@ -137,18 +138,26 @@ module OrganizationLicenseAudit
 
     def approve_dependencies(dependencies)
       return unless dependencies and dependencies.any?
-      require 'license_finder'
-      require 'license_finder/tables'
-      require 'license_finder/tables/dependency'
-      require 'license_finder/tables/license_alias'
-      require 'license_finder/tables/approval'
-      dependencies.each do |name|
-        dependency = LicenseFinder::Dependency.new(name: name, version: ">=0")
-        dependency.license = LicenseFinder::LicenseAlias.create(name: "other")
-        dependency.approval = LicenseFinder::Approval.create(:state => true)
-        dependency.save
+
+      # do not keep connection to Sequel around or next run fails
+      # reproducible with 2 repos --debug repo1,repo2 --approve xxx
+      # even disconnect + connect does not help since it never re-runs
+      # migrations, and then fails to run migrations properly
+      fork do
+        require 'license_finder'
+        require 'license_finder/tables'
+        require 'license_finder/tables/dependency'
+        require 'license_finder/tables/license_alias'
+        require 'license_finder/tables/approval'
+
+        dependencies.each do |name|
+          dependency = LicenseFinder::Dependency.new(name: name, version: ">=0")
+          dependency.license = LicenseFinder::LicenseAlias.create(name: "other")
+          dependency.approval = LicenseFinder::Approval.create(:state => true)
+          dependency.save
+        end
       end
-      DB.disconnect
+      Process.waitall # wait for fork to finish
     end
 
     def whitelist_licences(licenses)

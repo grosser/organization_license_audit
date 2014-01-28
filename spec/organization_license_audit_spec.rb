@@ -48,13 +48,13 @@ describe OrganizationLicenseAudit do
 
     it "fails when command raises" do
       $stderr.should_receive(:puts).at_least(:once)
-      call(stub(:name => "foo"), nil, nil).should == false
+      call(stub(:name => "foo"), nil, {}).should == false
     end
 
     it "stops on interrupt" do
       mock = ""
       mock.should_receive(:name).and_raise(Interrupt)
-      expect { call(mock, nil, nil) }.to raise_error(Interrupt)
+      expect { call(mock, nil, {}) }.to raise_error(Interrupt)
     end
   end
 
