@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    organization_license_audit (1.1.0)
+    organization_license_audit (1.1.1)
       license_finder (>= 0.9.4)
       organization_audit
 
@@ -21,7 +21,7 @@ GEM
       sequel
       sqlite3
       thor
-    multi_json (1.8.2)
+    multi_json (1.8.4)
     multi_xml (0.5.5)
     organization_audit (1.0.2)
       json
