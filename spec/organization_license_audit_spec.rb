@@ -1,7 +1,7 @@
 require "spec_helper"
 
 describe OrganizationLicenseAudit do
-  let(:public_token) { "--token 36a1b2a815b98d755528fa6e09b845965fe1e046" } # allows us to do more requests before getting rate limited
+  let(:public_token) { "--token 36a1b2a815b98d755528fa6e09b845965fe1e046" } # allows us to do more requests before getting rate limited (user: some-public-token)
 
   it "has a VERSION" do
     OrganizationLicenseAudit::VERSION.should =~ /^[\.\da-z]+$/
