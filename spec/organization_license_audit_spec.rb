@@ -200,15 +200,18 @@ describe OrganizationLicenseAudit do
     end
 
     describe "OLA_GROUP" do
-      let(:need_approval) { "Dependencies that need approval:" }
+      after { ENV.delete("OLA_GROUP") }
+      let(:need_approval) { "MIT, ruby -- https" }
 
       it "succeeds if nothing is in current group" do
-        result = audit("--user user-with-unpatched-apps #{public_token} OLA_GROUP=2/2")
+        ENV["OLA_GROUP"] = "2/2"
+        result = audit("--user user-with-unpatched-apps #{public_token}")
         result.should_not include need_approval
       end
 
       it "fails if error is in current group" do
-        result = audit("--user user-with-unpatched-apps #{public_token} OLA_GROUP=1/2")
+        ENV["OLA_GROUP"] = "1/2"
+        result = audit("--user user-with-unpatched-apps #{public_token}", :fail => true)
         result.should include need_approval
       end
     end
