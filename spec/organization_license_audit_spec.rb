@@ -153,6 +153,34 @@ describe OrganizationLicenseAudit do
     end
   end
 
+  context ".select_parallel_group!" do
+    def call(*args)
+      OrganizationLicenseAudit.send(:select_parallel_group!, *args)
+    end
+
+    after { ENV.delete("OLA_GROUP") }
+
+    it "does nothing when not set" do
+      a = [1,2,3,4,5,6,7,8,9,10]
+      call(a)
+      a.should == [1,2,3,4,5,6,7,8,9,10]
+    end
+
+    it "removes everything but the wanted when set" do
+      ENV["OLA_GROUP"] = "1/5"
+      a = [1,2,3,4,5,6,7,8,9,10,11]
+      call(a)
+      a.should == [1,6,11]
+    end
+
+    it "keeps everything for 1/1" do
+      ENV["OLA_GROUP"] = "1/1"
+      a = [1,2,3,4,5,6,7,8,9,10]
+      call(a)
+      a.should == [1,2,3,4,5,6,7,8,9,10]
+    end
+  end
+
   context "CLI" do
     it "succeeds with whitelisted" do
       result = audit("--user user-with-unpatched-apps --whitelist 'MIT,Ruby,Apache 2.0' #{public_token}")
@@ -169,6 +197,20 @@ describe OrganizationLicenseAudit do
       result.strip.should include "Dependencies that need approval:"
       result.strip.should include "json, 1.5.3, ruby"
       result.strip.should include "Failed:\nMIT, ruby -- https://github.com/user-with-unpatched-apps/unpatched -- user-with-unpatched-apps <michael+unpatched@grosser.it>"
+    end
+
+    describe "OLA_GROUP" do
+      let(:need_approval) { "Dependencies that need approval:" }
+
+      it "succeeds if nothing is in current group" do
+        result = audit("--user user-with-unpatched-apps #{public_token} OLA_GROUP=2/2")
+        result.should_not include need_approval
+      end
+
+      it "fails if error is in current group" do
+        result = audit("--user user-with-unpatched-apps #{public_token} OLA_GROUP=1/2")
+        result.should include need_approval
+      end
     end
 
     it "succeeds when all unapproved are in without" do

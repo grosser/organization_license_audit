@@ -87,6 +87,7 @@ module OrganizationLicenseAudit
       Dir.mktmpdir do |bundle_cache_dir|
         repos = OrganizationAudit.all(options)
         repos.select! { |r| options[:debug].include?(r.name) } if options[:debug]
+        select_parallel_group!(repos)
         repos.map do |repo|
           next if options[:ignore_gems] && repo.gem?
           success, output = audit_repo(repo, bundle_cache_dir, options)
@@ -231,6 +232,15 @@ module OrganizationLicenseAudit
         end
       end
       [$?.success?, output]
+    end
+
+    def select_parallel_group!(repos)
+      return unless group = ENV["OLA_GROUP"]
+      group, groups = group.split("/").map(&:to_i)
+      repos.each_with_index do |repo, i|
+        repos[i] = nil unless (i % groups) + 1 == group
+      end
+      repos.compact!
     end
 
     def wanted?(thing, options)

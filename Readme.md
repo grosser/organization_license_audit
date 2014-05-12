@@ -58,6 +58,20 @@ organization-license-audit \
   --token yyy
 ```
 
+### Timeouts / Parallel
+
+If this takes to long for you organization you can run it in parallel by giving OLA_GROUP=1/4 .. 2/4 .. 3/4 .. 4/4
+as env variables in travis to get 4 parallel builds.
+
+```
+script: organization-license-audit ...
+env:
+  - OLA_GROUP=1/4
+  - OLA_GROUP=2/4
+  - OLA_GROUP=3/4
+  - OLA_GROUP=4/4
+```
+
 ### Without
 not interested in npm and bundler ?
 `--without npm,bundler`
