@@ -181,6 +181,18 @@ describe OrganizationLicenseAudit do
     end
   end
 
+  context ".sh_with_retry" do
+    def call(*args)
+      OrganizationLicenseAudit.send(:sh_with_retry, *args)
+    end
+
+    before { $stderr.stub(:puts) }
+
+    it "retries" do
+      call("echo X && false 2>&1").should == [false, "X\nX\n"]
+    end
+  end
+
   context "CLI" do
     it "succeeds with whitelisted" do
       result = audit("--user user-with-unpatched-apps --whitelist 'MIT,Ruby,Apache 2.0' #{public_token}")
