@@ -79,7 +79,13 @@ module OrganizationLicenseAudit
     end
 
     def download_file(repo, file)
-      return unless content = repo.content(file)
+      begin
+        content = repo.content(file)
+      rescue StandardError => e
+        puts "Error downloading #{file}: #{e.to_s}"
+        content = repo.content(file)
+      end
+      return unless content
       FileUtils.mkdir_p(File.dirname(file))
       File.write(file, content)
     end
@@ -173,7 +179,7 @@ module OrganizationLicenseAudit
     def prepare_bundler(bundle_cache_dir, options)
       with_or_without :bundler, options do
         use_cache_dir_to_bundle(bundle_cache_dir)
-        raise "Failed to bundle" unless sh_with_retry("bundle --path #{BUNDLE_PATH} --quiet 2>&1").first
+        raise "Failed to bundle" unless sh_with_retry("bundle --path #{BUNDLE_PATH} --quiet 2>&1", "Gem::RemoteFetcher::FetchError").first
         true
       end
     end

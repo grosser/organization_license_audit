@@ -198,14 +198,16 @@ describe OrganizationLicenseAudit do
   end
 
   context "CLI" do
+    let(:bundle_command){ "bundle --path vendor/bundle --quiet 2>&1" }
+
     it "succeeds with whitelisted" do
       result = audit("--user user-with-unpatched-apps --whitelist 'MIT,Ruby,Apache 2.0' #{public_token}")
-      result.strip.should == "unpatched\nbundle --path vendor/bundle --quiet\nlicense_finder --quiet\nAll dependencies are approved for use"
+      result.strip.should == "unpatched\n#{bundle_command}\nlicense_finder --quiet\nAll dependencies are approved for use"
     end
 
     it "succeeds with approved" do
       result = audit("--user user-with-unpatched-apps --approve 'json,bundler' #{public_token}")
-      result.strip.should == "unpatched\nbundle --path vendor/bundle --quiet\nlicense_finder --quiet\nAll dependencies are approved for use"
+      result.strip.should == "unpatched\n#{bundle_command}\nlicense_finder --quiet\nAll dependencies are approved for use"
     end
 
     it "fails with unapproved" do
