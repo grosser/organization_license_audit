@@ -188,8 +188,12 @@ describe OrganizationLicenseAudit do
 
     before { $stderr.stub(:puts) }
 
-    it "retries" do
-      call("echo X && false 2>&1").should == [false, "X\nX\n"]
+    it "does not retry on unknown" do
+      call("echo X && false 2>&1", "Y").should == [false, "X\n"]
+    end
+
+    it "retries on known" do
+      call("echo X && false 2>&1", "X").should == [false, "X\nX\n"]
     end
   end
 

@@ -2,6 +2,7 @@ require "organization_license_audit/version"
 require "tmpdir"
 require "organization_audit"
 require "shellwords"
+require "open3"
 
 module OrganizationLicenseAudit
   BUNDLE_PATH = "vendor/bundle"
@@ -102,7 +103,7 @@ module OrganizationLicenseAudit
       in_temp_dir do
         if repo.gem?
           # download everything since gemspecs can require stuff (also gems are mostly small...)
-          raise "Clone failed" unless sh_with_retry("git clone #{repo.clone_url} --depth 1 --quiet .").first
+          raise "Clone failed" unless sh("git clone #{repo.clone_url} --depth 1 --quiet .").first
         else
           # download only the files we need to save time on giant projects
           needed_files(repo, options).each { |path| download_file(repo, path) }
@@ -172,7 +173,7 @@ module OrganizationLicenseAudit
     def prepare_bundler(bundle_cache_dir, options)
       with_or_without :bundler, options do
         use_cache_dir_to_bundle(bundle_cache_dir)
-        raise "Failed to bundle" unless sh_with_retry("bundle --path #{BUNDLE_PATH} --quiet").first
+        raise "Failed to bundle" unless sh_with_retry("bundle --path #{BUNDLE_PATH} --quiet 2>&1").first
         true
       end
     end
@@ -234,9 +235,9 @@ module OrganizationLicenseAudit
       [$?.success?, output]
     end
 
-    def sh_with_retry(cmd)
+    def sh_with_retry(cmd, retry_on)
       status, result = sh(cmd)
-      unless status
+      if !status && result.include?(retry_on)
         $stderr.puts "Retrying failed command once"
         status, result2 = sh(cmd)
         result << result2
