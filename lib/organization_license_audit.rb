@@ -242,11 +242,14 @@ module OrganizationLicenseAudit
     end
 
     def sh_with_retry(cmd, retry_on)
-      status, result = sh(cmd)
-      if !status && result.include?(retry_on)
-        $stderr.puts "Retrying failed command once"
-        status, result2 = sh(cmd)
-        result << result2
+      status = false
+      result = ""
+      3.times do |i|
+        $stderr.puts "Retrying failed command" if i > 0
+        status, current = sh(cmd)
+        result << current
+        return status, result if status
+        break unless current.include?(retry_on)
       end
       return status, result
     end

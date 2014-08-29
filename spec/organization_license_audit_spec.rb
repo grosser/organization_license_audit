@@ -193,7 +193,7 @@ describe OrganizationLicenseAudit do
     end
 
     it "retries on known" do
-      call("echo X && false 2>&1", "X").should == [false, "X\nX\n"]
+      call("echo X && false 2>&1", "X").should == [false, "X\nX\nX\n"]
     end
   end
 
